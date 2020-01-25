@@ -30,6 +30,7 @@ class StravaData:
         self.client = Client()
         self.activities_dict = defaultdict(list)
         self.token_expires = None
+        self.df = None
 
     def refresh(self):
         refresh_response = self.client.refresh_access_token(client_id=config['Strava']['ClientID'],
@@ -133,10 +134,24 @@ class StravaData:
         self.check_dict()
         df = pd.DataFrame(self.activities_dict)
         logger.info(f'{len(df)} records retrieved')
+        self.df = df
+        return df
+
+    def cleanup_data(self):
+        """Removing rows that are errors or duplicates"""
+        # Errors - get rid of these first
+        df_drop = self.df[self.df['distance_miles'] < 1]
+        self.df = self.df.drop(index=df_drop.index)
+        # Duplicates - only expected to have one run per day in most cases
+        df_dupes = self.df[self.df['activity_type'] == 'Run']
+        df_dupes = df_dupes[df_dupes.duplicated('start_date', keep=False)]
+        strava_activity_name = ['Afternoon Run', 'Lunch Run', 'Morning Run', 'Evening Run', 'Barcelona Marathon ']
+
+    def save_data_frame(self):
         if not os.path.exists('Results'):
             os.mkdir('Results')
         file_name = f"Strava Data {datetime.utcnow().strftime('%Y-%m-%d %H%M')}.csv"
-        df.to_csv(os.path.join(os.getcwd(), 'Results', file_name), index=False, encoding='utf-8-sig')
+        self.df.to_csv(os.path.join(os.getcwd(), 'Results', file_name), index=False, encoding='utf-8-sig')
         logger.info(f'File saved as {file_name}')
 
 
