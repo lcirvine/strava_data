@@ -44,6 +44,24 @@ class StravaData:
         if time.time() > self.token_expires:
             self.refresh()
 
+    @staticmethod
+    def get_splits(splits_standard):
+        mile_count = 1
+        splits = {}
+        if splits_standard:
+            for split in splits_standard:
+                time_min = round((split.moving_time.seconds / 60), 4)
+                if split.distance.get_num() < 1600:
+                    mile_fraction = round((split.distance.get_num() / 1609), 2)
+                    mile_count += mile_fraction
+                    splits[mile_count] = time_min / mile_fraction
+                else:
+                    splits[mile_count] = time_min
+                mile_count += 1
+            return splits
+        else:
+            return None
+
     def get_activities(self, limit=None):
         """
         https://pythonhosted.org/stravalib/api.html#stravalib.model.Activity
@@ -74,6 +92,16 @@ class StravaData:
             self.activities_dict['moving_time_sec'].append(moving_time_sec)
             self.activities_dict['elapsed_time_sec'].append(activity.elapsed_time.seconds)
             # Speed
+            splits_dict = self.get_splits(activity.splits_standard)
+            self.activities_dict['splits'].append(splits_dict)
+            if splits_dict is not None:
+                fastest_mile = min(splits_dict, key=splits_dict.get)
+                self.activities_dict['fastest_mile'].append(fastest_mile)
+                self.activities_dict['fastest_mile_time'].append(splits_dict[fastest_mile])
+            else:
+                fastest_mile = None
+                self.activities_dict['fastest_mile'].append(fastest_mile)
+                self.activities_dict['fastest_mile_time'].append(None)
             self.activities_dict['average_speed_ms'].append(activity.average_speed.get_num())
             if distance_miles != 0:
                 self.activities_dict['avg_speed_min_mile'].append((moving_time_sec / 60) / distance_miles)
@@ -98,7 +126,9 @@ class StravaData:
             self.activities_dict['elev_low_m'].append(activity.elev_low)
             self.activities_dict['total_elevation_gain_m'].append(activity.total_elevation_gain.get_num())
             # Health
+            self.activities_dict['has_heartrate'].append(activity.has_heartrate)
             self.activities_dict['average_heartrate'].append(activity.average_heartrate)
+            self.activities_dict['max_heartrate'].append(activity.max_heartrate)
             self.activities_dict['calories'].append(activity.calories)
             # Records
             self.activities_dict['pr_count'].append(activity.pr_count)
@@ -109,10 +139,11 @@ class StravaData:
             # Additional
             self.activities_dict['device_name'].append(activity.device_name)
             self.activities_dict['upload_id'].append(activity.upload_id)
+            self.activities_dict['external_id'].append(activity.external_id)
             self.activities_dict['start_datetime_utc'].append(activity.start_date.strftime('%Y-%m-%d %H:%M:%S'))
             self.activities_dict['start_date'].append(start_datetime.strftime('%Y-%m-%d'))
             self.activities_dict['start_time'].append(start_datetime.strftime('%H:%M:%S'))
-
+            # Refresh if necessary
             self.check_expiry()
 
     def check_dict(self):
@@ -161,6 +192,7 @@ if __name__ == '__main__':
         sd.refresh()
         sd.get_activities()
         sd.create_data_frame()
+        sd.save_data_frame()
     except Exception as e:
         logger.info(e, exc_info=sys.exc_info())
         logger.info('-' * 100)
