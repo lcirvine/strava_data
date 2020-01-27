@@ -53,8 +53,8 @@ class StravaData:
                 time_min = round((split.moving_time.seconds / 60), 4)
                 if split.distance.get_num() < 1600:
                     mile_fraction = round((split.distance.get_num() / 1609), 2)
-                    mile_count += mile_fraction
-                    splits[mile_count] = time_min / mile_fraction
+                    mile_count = (mile_count - 1) + mile_fraction
+                    splits[mile_count] = round(time_min / mile_fraction, 4)
                 else:
                     splits[mile_count] = time_min
                 mile_count += 1
@@ -103,10 +103,7 @@ class StravaData:
                 self.activities_dict['fastest_mile'].append(fastest_mile)
                 self.activities_dict['fastest_mile_time'].append(None)
             self.activities_dict['average_speed_ms'].append(activity.average_speed.get_num())
-            if distance_miles != 0:
-                self.activities_dict['avg_speed_min_mile'].append((moving_time_sec / 60) / distance_miles)
-            else:
-                self.activities_dict['avg_speed_min_mile'].append(None)
+            self.activities_dict['avg_speed_min_mile'].append((moving_time_sec / 60) / distance_miles)
             self.activities_dict['max_speed_ms'].append(activity.max_speed.get_num())
             # Location
             self.activities_dict['country'].append(activity.location_country)
@@ -167,16 +164,6 @@ class StravaData:
         logger.info(f'{len(df)} records retrieved')
         self.df = df
         return df
-
-    def cleanup_data(self):
-        """Removing rows that are errors or duplicates"""
-        # Errors - get rid of these first
-        df_drop = self.df[self.df['distance_miles'] < 1]
-        self.df = self.df.drop(index=df_drop.index)
-        # Duplicates - only expected to have one run per day in most cases
-        df_dupes = self.df[self.df['activity_type'] == 'Run']
-        df_dupes = df_dupes[df_dupes.duplicated('start_date', keep=False)]
-        strava_activity_name = ['Afternoon Run', 'Lunch Run', 'Morning Run', 'Evening Run', 'Barcelona Marathon ']
 
     def save_data_frame(self):
         if not os.path.exists('Results'):
