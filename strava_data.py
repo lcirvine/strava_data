@@ -75,6 +75,7 @@ class StravaData:
             activities = self.client.get_activities()
         logger.info('Retrieving activity data from Strava.')
         for activity in activities:
+            this_activity = self.client.get_activity(activity.id)
             # Basics
             self.activities_dict['activity_id'].append(activity.id)
             self.activities_dict['activity_type'].append(activity.type)
@@ -85,6 +86,7 @@ class StravaData:
             self.activities_dict['commute'].append(activity.commute)
             # Distance
             distance_miles = unithelper.miles(activity.distance).get_num()
+            assert int(distance_miles) > 0, f'Distance for activity ID {activity.id} is zero'
             self.activities_dict['distance_miles'].append(distance_miles)
             self.activities_dict['distance_meters'].append(activity.distance.get_num())
             # Time
@@ -92,7 +94,7 @@ class StravaData:
             self.activities_dict['moving_time_sec'].append(moving_time_sec)
             self.activities_dict['elapsed_time_sec'].append(activity.elapsed_time.seconds)
             # Speed
-            splits_dict = self.get_splits(activity.splits_standard)
+            splits_dict = self.get_splits(this_activity.splits_standard)
             self.activities_dict['splits'].append(splits_dict)
             if splits_dict is not None:
                 fastest_mile = min(splits_dict, key=splits_dict.get)
@@ -126,7 +128,7 @@ class StravaData:
             self.activities_dict['has_heartrate'].append(activity.has_heartrate)
             self.activities_dict['average_heartrate'].append(activity.average_heartrate)
             self.activities_dict['max_heartrate'].append(activity.max_heartrate)
-            self.activities_dict['calories'].append(activity.calories)
+            self.activities_dict['calories'].append(this_activity.calories)
             # Records
             self.activities_dict['pr_count'].append(activity.pr_count)
             self.activities_dict['best_efforts'].append(activity.best_efforts)
@@ -134,7 +136,7 @@ class StravaData:
             self.activities_dict['average_watts'].append(activity.average_watts)
             self.activities_dict['kilojoules'].append(activity.kilojoules)
             # Additional
-            self.activities_dict['device_name'].append(activity.device_name)
+            self.activities_dict['device_name'].append(this_activity.device_name)
             self.activities_dict['upload_id'].append(activity.upload_id)
             self.activities_dict['external_id'].append(activity.external_id)
             self.activities_dict['start_datetime_utc'].append(activity.start_date.strftime('%Y-%m-%d %H:%M:%S'))
