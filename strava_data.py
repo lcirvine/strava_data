@@ -53,8 +53,11 @@ class StravaData:
                 time_min = round((split.moving_time.seconds / 60), 4)
                 if split.distance.get_num() < 1600:
                     mile_fraction = round((split.distance.get_num() / 1609), 2)
-                    mile_count = (mile_count - 1) + mile_fraction
-                    splits[mile_count] = round(time_min / mile_fraction, 4)
+                    if mile_fraction > 0:
+                        mile_count = (mile_count - 1) + mile_fraction
+                        splits[mile_count] = round(time_min / mile_fraction, 4)
+                    else:
+                        pass
                 else:
                     splits[mile_count] = time_min
                 mile_count += 1
@@ -143,6 +146,7 @@ class StravaData:
             self.activities_dict['start_date'].append(start_datetime.strftime('%Y-%m-%d'))
             self.activities_dict['start_time'].append(start_datetime.strftime('%H:%M:%S'))
             # Refresh if necessary
+            time.sleep(2)
             self.check_expiry()
 
     def check_dict(self):
@@ -182,6 +186,8 @@ if __name__ == '__main__':
         sd.get_activities()
         sd.create_data_frame()
         sd.save_data_frame()
+        print('Complete')
     except Exception as e:
-        logger.info(e, exc_info=sys.exc_info())
+        logger.error(e, exc_info=sys.exc_info())
         logger.info('-' * 100)
+        print('Error')
