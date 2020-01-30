@@ -250,6 +250,7 @@ class StravaData:
         """
         self.check_dict(self.additional_dict)
         df_addtl = pd.DataFrame(self.additional_dict)
+        df_addtl['activity_id'] = df_addtl['activity_id'].astype(self.df['activity_id'].dtypes.name)
         self.df = pd.merge(self.df, df_addtl, on='activity_id')
         self.df = self.df[self.cols]
         self.save_data_frame()
