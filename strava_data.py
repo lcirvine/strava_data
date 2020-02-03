@@ -31,7 +31,13 @@ class StravaData:
         self.activities_dict = defaultdict(list)
         self.additional_dict = defaultdict(list)
         self.token_expires = None
-        self.df = None
+        self.results_file = os.path.join('Results', 'Strava Data.csv')
+        if os.path.exists(self.results_file):
+            self.df = pd.read_csv(self.results_file)
+            self.latest_activity = self.df['start_datetime'].max()
+        else:
+            self.df = None
+            self.latest_activity = None
         self.cols = ['activity_id', 'activity_type', 'start_datetime', 'activity_name', 'activity_description',
                      'commute', 'distance_miles', 'distance_meters', 'moving_time_sec', 'elapsed_time_sec', 'splits',
                      'fastest_mile', 'fastest_mile_time', 'average_speed_ms', 'avg_speed_min_mile', 'max_speed_ms',
@@ -63,18 +69,17 @@ class StravaData:
         if time.time() > self.token_expires:
             self.refresh()
 
-    def get_activities(self, limit=None):
+    def get_activities(self):
         """
         This function gets most of the activity data I'm interested in.
         This usually only results in about 4 API calls so I don't have to worry about rate limiting
-        However, retrieving data through this method does not return split information, calories or device name.
+        However, retrieving data through this method does not return split information, gear, calories or device name.
         To return those data points, use the additional_info function.
-        :param limit: Limits the number of activities returned, starting with the latest
         :return: The data is saved to a dictionary which can be turned into a data frame
         """
-        if limit:
-            activities = self.client.get_activities(limit=limit)
-            logger.info(f'Retrieving {limit} records.')
+        if self.latest_activity is not None:
+            activities = self.client.get_activities(after=self.latest_activity)
+            logger.info(f'Retrieving records after {self.latest_activity}.')
         else:
             activities = self.client.get_activities()
         logger.info('Retrieving main activity data.')
@@ -149,6 +154,45 @@ class StravaData:
             # Refresh if necessary
             self.check_expiry()
         logger.info('Finished retrieving main activity data.')
+        logger.info(f"{len(self.activities_dict['activity_id'])} records retrieved")
+
+    def additional_info(self):
+        """
+        This is used to retrieve the split information, gear, calories and device name.
+        To retrieve that information, you apparently have to use a specific activity ID.
+        This results in far more API calls since you are making one call per activity.
+        It also takes longer to retrieve since you have to wait to avoid the rate limit.
+        Rate limit = 600 calls per 15 minutes (i.e. 40 calls per minute or 2 calls every 3 seconds)
+        :return:
+        """
+        logger.info('Retrieving additional activity data.')
+        logger.setLevel(logging.ERROR)
+        for activity in self.activities_dict['activity_id']:
+            this_activity = self.client.get_activity(activity)
+            # self.activities_dict['activity_id'].append(activity)
+            splits_dict = self.get_splits(this_activity.splits_standard)
+            self.activities_dict['splits'].append(splits_dict)
+            if splits_dict is not None:
+                fastest_mile = min(splits_dict, key=splits_dict.get)
+                self.activities_dict['fastest_mile'].append(fastest_mile)
+                self.activities_dict['fastest_mile_time'].append(splits_dict[fastest_mile])
+            else:
+                self.activities_dict['fastest_mile'].append(None)
+                self.activities_dict['fastest_mile_time'].append(None)
+            if this_activity.gear is not None:
+                self.activities_dict['gear'].append(this_activity.gear.name)
+                self.activities_dict['gear_id'].append(this_activity.gear.id)
+            else:
+                self.activities_dict['gear'].append(None)
+                self.activities_dict['gear_id'].append(None)
+            self.activities_dict['calories'].append(this_activity.calories)
+            self.activities_dict['device_name'].append(this_activity.device_name)
+            time.sleep(1)
+            self.check_expiry()
+        logger.setLevel(logging.INFO)
+        logger.info('Finished retrieving additional activity data.')
+        # Adding additional info to main activities dictionary
+        # self.activities_dict.update(self.additional_dict)
 
     @staticmethod
     def check_dict(dictionary):
@@ -165,54 +209,6 @@ class StravaData:
             for k in keys_to_del:
                 dictionary.pop(k, None)
                 logger.info(f'Column {k} was removed from data')
-
-    def create_data_frame(self):
-        """
-        Creates a data frame from the activities_dict dictionary.
-        The data frame is saved as a class variable.
-        :return:
-        """
-        self.check_dict(self.activities_dict)
-        self.df = pd.DataFrame(self.activities_dict)
-        logger.info(f'{len(self.df)} records retrieved')
-
-    def additional_info(self):
-        """
-        This is used to retrieve the split information, gear, calories and device name.
-        To retrieve that information, you apparently have to use a specific activity ID.
-        This results in far more API calls since you are making one call per activity.
-        It also takes longer to retrieve since you have to wait to avoid the rate limit.
-        Rate limit = 600 calls per 15 minutes (i.e. 40 calls per minute or 2 calls every 3 seconds)
-        :return:
-        """
-        logger.info('Retrieving additional activity data.')
-        logger.setLevel(logging.ERROR)
-        activities = self.client.get_activities()
-        for activity in activities:
-            this_activity = self.client.get_activity(activity.id)
-            self.additional_dict['activity_id'].append(this_activity)
-            splits_dict = self.get_splits(this_activity.splits_standard)
-            self.additional_dict['splits'].append(splits_dict)
-            if splits_dict is not None:
-                fastest_mile = min(splits_dict, key=splits_dict.get)
-                self.additional_dict['fastest_mile'].append(fastest_mile)
-                self.additional_dict['fastest_mile_time'].append(splits_dict[fastest_mile])
-            else:
-                self.additional_dict['fastest_mile'].append(None)
-                self.additional_dict['fastest_mile_time'].append(None)
-            if this_activity.gear is not None:
-                self.additional_dict['gear'].append(this_activity.gear.name)
-                self.additional_dict['gear_id'].append(this_activity.gear.id)
-            else:
-                self.additional_dict['gear'].append(None)
-                self.additional_dict['gear_id'].append(None)
-            self.additional_dict['calories'].append(this_activity.calories)
-            self.additional_dict['device_name'].append(this_activity.device_name)
-            time.sleep(2)
-            self.check_expiry()
-        logger.setLevel(logging.INFO)
-        logger.info('Finished retrieving additional activity data.')
-        self.merge_additional()
 
     @staticmethod
     def get_splits(splits_standard):
@@ -242,27 +238,32 @@ class StravaData:
         else:
             return None
 
-    def merge_additional(self):
+    def create_data_frame(self):
         """
-        Merges the additional activity info to the main data frame
-        and calls save_data_frame to save the file as csv.
+        Creates a data frame from the activities_dict dictionary.
+        The data frame is saved as a class variable.
         :return:
         """
-        self.check_dict(self.additional_dict)
-        df_addtl = pd.DataFrame(self.additional_dict)
-        df_addtl['activity_id'] = df_addtl['activity_id'].astype(self.df['activity_id'].dtypes.name)
-        self.df = pd.merge(self.df, df_addtl, on='activity_id')
-        self.df = self.df[self.cols]
-        self.save_data_frame()
+        self.check_dict(self.activities_dict)
+        if self.df is not None:
+            df_new = pd.DataFrame(self.activities_dict)
+            self.df = self.df.append(df_new, sort=False)
+            self.df.sort_values(by='start_datetime', ascending=False, inplace=True)
+            self.df.reset_index(drop=True, inplace=True)
+        else:
+            self.df = pd.DataFrame(self.activities_dict)
 
-    def save_data_frame(self):
+    def save_data_frame(self, include_datetime=False):
         """
         Saves the data frame as a file with the name 'Strava Data' and the current datetime.
         :return:
         """
         if not os.path.exists('Results'):
             os.mkdir('Results')
-        file_name = f"Strava Data {datetime.utcnow().strftime('%Y-%m-%d %H%M')}.csv"
+        if include_datetime:
+            file_name = f"Strava Data {datetime.utcnow().strftime('%Y-%m-%d %H%M')}.csv"
+        else:
+            file_name = "Strava Data.csv"
         self.df.to_csv(os.path.join(os.getcwd(), 'Results', file_name), index=False, encoding='utf-8-sig')
         logger.info(f'File saved as {file_name}')
 
@@ -272,9 +273,9 @@ if __name__ == '__main__':
         sd = StravaData()
         sd.refresh()
         sd.get_activities()
+        sd.additional_info()
         sd.create_data_frame()
         sd.save_data_frame()
-        sd.additional_info()
         print('Complete')
     except Exception as e:
         logger.error(e, exc_info=sys.exc_info())
