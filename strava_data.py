@@ -225,9 +225,9 @@ class StravaData:
             for split in splits_standard:
                 time_min = round((split.moving_time.seconds / 60), 4)
                 if split.distance.get_num() < 1600:
-                    mile_fraction = round((split.distance.get_num() / 1609), 2)
+                    mile_fraction = (split.distance.get_num() / 1609)
                     if mile_fraction > 0:
-                        mile_count = (mile_count - 1) + mile_fraction
+                        mile_count = round((mile_count - 1) + mile_fraction, 2)
                         splits[mile_count] = round(time_min / mile_fraction, 4)
                     else:
                         pass
