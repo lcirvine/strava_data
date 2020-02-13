@@ -55,10 +55,10 @@ for y in year_list:
     # ax2.text(x=f'{y}-11-01', y=1, s=year_text)
     ax2.text(0.85, 0.01, year_text, transform=ax2.transAxes)
     fig.tight_layout()
-    chart_file = os.path.join('Charts', f'{y} Running Chart.jpg')
+    chart_file = os.path.join('Charts', f'{y} Running Chart.png')
     if os.path.exists(chart_file):
         os.unlink(chart_file)
-    fig.savefig(os.path.join('Charts', f'{y} Running Chart.jpg'))
+    fig.savefig(os.path.join('Charts', f'{y} Running Chart.png'))
     # plt.show()
 
 df_ride = df[df['activity_type'] == 'Ride']
