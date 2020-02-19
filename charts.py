@@ -2,6 +2,7 @@ import os
 import pandas as pd
 from pandas.plotting import register_matplotlib_converters
 import matplotlib.pyplot as plt
+import seaborn as sns
 from datetime import date
 # from matplotlib.collections import LineCollection
 # from matplotlib.colors import ListedColormap, BoundaryNorm
@@ -19,11 +20,13 @@ register_matplotlib_converters()
 
 df = pd.read_csv(os.path.join(os.getcwd(), 'Results', 'Strava Data.csv'))
 df.sort_values('start_datetime', inplace=True)
-date_cols = ['start_datetime', 'start_datetime_utc', 'start_date']
+date_cols = ['start_datetime', 'start_datetime_utc', 'start_date', 'start_time']
 for col in date_cols:
     df[col] = df[col].astype('datetime64[ns]')
 df['start_date'] = df['start_date'].dt.date
 df['year'] = pd.DatetimeIndex(df['start_datetime']).year
+df['day_of_week'] = df['start_datetime_utc'].dt.day_name()
+df['hour'] = df['start_time'].dt.hour
 
 df_run = df[df['activity_type'] == 'Run']
 year_list = df_run['year'].unique().tolist()
@@ -33,6 +36,14 @@ df_ride['total_miles'] = df_ride['distance_miles'].cumsum()
 
 df_run_distance_year = df_run.groupby('year')['distance_miles'].sum()
 df_ride_distance_year = df_ride.groupby('year')['distance_miles'].sum()
+
+df_run_pivot = pd.pivot_table(df_run, 'distance_miles', 'hour', 'day_of_week', 'sum', fill_value=0)
+df_run_pivot = df_run_pivot.round(2)
+df_run_pivot = df_run_pivot[['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']]
+heatmap = sns.heatmap(df_run_pivot.astype('int'), cmap='RdBu_r', annot=True, fmt='d', linewidth=0.5)
+df_run_pivot.to_csv(os.path.join(os.getcwd(), 'Results', 'Time of Day.csv'), index=False, encoding='utf-8-sig')
+fig = heatmap.get_figure()
+fig.savefig(os.path.join(os.getcwd(), 'Charts', 'Heatmap.png'))
 
 
 def all_years():
