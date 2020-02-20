@@ -40,10 +40,20 @@ df_ride_distance_year = df_ride.groupby('year')['distance_miles'].sum()
 df_run_pivot = pd.pivot_table(df_run, 'distance_miles', 'hour', 'day_of_week', 'sum', fill_value=0)
 df_run_pivot = df_run_pivot.round(2)
 df_run_pivot = df_run_pivot[['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']]
-heatmap = sns.heatmap(df_run_pivot.astype('int'), cmap='RdBu_r', annot=True, fmt='d', linewidth=0.5)
-df_run_pivot.to_csv(os.path.join(os.getcwd(), 'Results', 'Time of Day.csv'), index=False, encoding='utf-8-sig')
-fig = heatmap.get_figure()
-fig.savefig(os.path.join(os.getcwd(), 'Charts', 'Heatmap.png'))
+
+
+def time_of_day():
+    plt.figure(figsize=(10, 10))
+    heatmap = sns.heatmap(df_run_pivot.astype('int'), cmap='OrRd', annot=True, fmt='d', linewidth=0.5)
+    heatmap.xaxis.tick_top()
+    heatmap.xaxis.set_label_position('top')
+    heatmap.tick_params(length=0)
+    heatmap.set_xticklabels(heatmap.get_xticklabels(), rotation=45)
+
+    df_run_pivot.to_csv(os.path.join(os.getcwd(), 'Results', 'Time of Day.csv'), index=False, encoding='utf-8-sig')
+    fig = heatmap.get_figure()
+    fig.savefig(os.path.join(os.getcwd(), 'Charts', 'When I run.png'))
+    plt.show()
 
 
 def all_years():
@@ -75,10 +85,10 @@ def all_years():
         # ax2.text(x=f'{y}-11-01', y=1, s=year_text)
         ax2.text(0.85, 0.01, year_text, transform=ax2.transAxes)
         fig.tight_layout()
-        chart_file = os.path.join('Charts', f'{y} Running Chart.jpg')
+        chart_file = os.path.join('Charts', f'{y} Running Chart.png')
         if os.path.exists(chart_file):
             os.unlink(chart_file)
-        fig.savefig(os.path.join('Charts', f'{y} Running Chart.jpg'))
+        fig.savefig(os.path.join('Charts', f'{y} Running Chart.png'))
         # plt.show()
 
 
@@ -115,12 +125,14 @@ def this_year():
     # ax2.text(x=f'{y}-11-01', y=1, s=year_text)
     ax2.text(0.85, 0.01, year_text, transform=ax2.transAxes)
     fig.tight_layout()
-    chart_file = os.path.join('Charts', f'{y} Running Chart.jpg')
+    chart_file = os.path.join('Charts', f'{y} Running Chart.png')
     if os.path.exists(chart_file):
         os.unlink(chart_file)
-    fig.savefig(os.path.join('Charts', f'{y} Running Chart.jpg'))
+    fig.savefig(os.path.join('Charts', f'{y} Running Chart.png'))
     plt.show()
 
 
 if __name__ == '__main__':
+    # all_years()
     this_year()
+    time_of_day()
