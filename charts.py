@@ -75,13 +75,13 @@ def all_years():
         ax1.set_title(f'{y} Running Data')
         c = df_run_y['avg_speed_min_mile']
         plt.scatter(df_run_y['start_date'], df_run_y['avg_speed_min_mile'], c=c, cmap='cool_r')
-        ax1.set_ylim(ymin=df_run_y['avg_speed_min_mile'].max() + 0.1, ymax=df_run_y['avg_speed_min_mile'].min() - 0.1)
-        ax1.set_xlim(xmin=f'{y}-01-01', xmax=f'{y}-12-31')
+        ax1.set_ylim(bottom=df_run_y['avg_speed_min_mile'].max() + 0.1, top=df_run_y['avg_speed_min_mile'].min() - 0.1)
+        ax1.set_xlim(left=f'{y}-01-01', right=f'{y}-12-31')
 
         ax2 = ax1.twinx()
         ax2.set_ylabel('Total Miles')
         ax2.plot(df_run_y['start_date'], df_run_y['total_miles'], color='blue')
-        ax2.set_ylim(ymin=0, ymax=df_run_y['total_miles'].max())
+        ax2.set_ylim(bottom=0, top=df_run_y['total_miles'].max())
         # ax2.text(x=f'{y}-11-01', y=1, s=year_text)
         ax2.text(0.85, 0.01, year_text, transform=ax2.transAxes)
         fig.tight_layout()
@@ -115,13 +115,13 @@ def this_year():
     ax1.set_title(f'{y} Running Data')
     c = df_run_y['avg_speed_min_mile']
     plt.scatter(df_run_y['start_date'], df_run_y['avg_speed_min_mile'], c=c, cmap='cool_r')
-    ax1.set_ylim(ymin=df_run_y['avg_speed_min_mile'].max() + 0.1, ymax=df_run_y['avg_speed_min_mile'].min() - 0.1)
-    ax1.set_xlim(xmin=f'{y}-01-01', xmax=f'{y}-12-31')
+    ax1.set_ylim(bottom=df_run_y['avg_speed_min_mile'].max() + 0.1, top=df_run_y['avg_speed_min_mile'].min() - 0.1)
+    ax1.set_xlim(left=f'{y}-01-01', right=f'{y}-12-31')
 
     ax2 = ax1.twinx()
     ax2.set_ylabel('Total Miles')
     ax2.plot(df_run_y['start_date'], df_run_y['total_miles'], color='blue')
-    ax2.set_ylim(ymin=0, ymax=expected_total_year_end)
+    ax2.set_ylim(bottom=0, top=expected_total_year_end)
     # ax2.text(x=f'{y}-11-01', y=1, s=year_text)
     ax2.text(0.85, 0.01, year_text, transform=ax2.transAxes)
     fig.tight_layout()
