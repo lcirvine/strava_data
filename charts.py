@@ -50,7 +50,7 @@ def time_of_day():
     heatmap.tick_params(length=0)
     heatmap.set_xticklabels(heatmap.get_xticklabels(), rotation=45)
 
-    df_run_pivot.to_csv(os.path.join(os.getcwd(), 'Results', 'Time of Day.csv'), index=False, encoding='utf-8-sig')
+    df_run_pivot.to_csv(os.path.join(os.getcwd(), 'Results', 'Time of Day.csv'), encoding='utf-8-sig')
     fig = heatmap.get_figure()
     fig.savefig(os.path.join(os.getcwd(), 'Charts', 'When I run.png'))
     plt.show()
