@@ -31,7 +31,9 @@ class StravaData:
         self.client = Client()
         self.activities_dict = defaultdict(list)
         # self.additional_dict = defaultdict(list)
-        self.location_dict = {}
+        self.location_dict = {(None, None): {'country_code': None, 'country': None, 'region': None, 'state': None,
+                                             'city': None, 'suburb': None, 'neighborhood': None, 'postal': None,
+                                             'address': None}}
         self.token_expires = None
         self.results_file = os.path.join('Results', 'Strava Data.csv')
         if os.path.exists(self.results_file):
@@ -43,12 +45,12 @@ class StravaData:
         self.cols = ['activity_id', 'activity_type', 'start_datetime', 'activity_name', 'activity_description',
                      'commute', 'distance_miles', 'distance_meters', 'moving_time_sec', 'elapsed_time_sec', 'splits',
                      'fastest_mile', 'fastest_mile_time', 'average_speed_ms', 'avg_speed_min_mile', 'max_speed_ms',
-                     'country_code', 'country', 'state', 'city', 'postal', 'address', 'start_lat', 'start_lon',
-                     'start_lat_lon', 'end_lat', 'end_lon', 'end_lat_lon', 'average_temp',
+                     'country_code', 'country', 'region', 'state', 'city', 'neighborhood', 'postal', 'address',
+                     'start_lat', 'start_lon', 'start_lat_lon', 'end_lat', 'end_lon', 'end_lat_lon', 'average_temp',
                      'elev_high_m', 'elev_low_m', 'total_elevation_gain_m', 'has_heartrate', 'average_heartrate',
                      'max_heartrate', 'calories', 'pr_count', 'best_efforts', 'average_watts', 'kilojoules',
                      'device_name', 'gear', 'gear_id', 'upload_id', 'external_id', 'start_datetime_utc', 'start_date',
-                     'start_time']
+                     'start_time', 'hour', 'day_of_week', 'year']
 
     def refresh(self):
         """
@@ -166,17 +168,17 @@ class StravaData:
             self.activities_dict['device_name'].append(this_activity.device_name)
 
             # Location
-            # self.activities_dict['country'].append(activity.location_country)
-            # self.activities_dict['state'].append(activity.location_state)
-            # self.activities_dict['city'].append(activity.location_city)
             start_lat = this_activity.start_latitude
             start_lon = this_activity.start_longitude
             if (start_lat, start_lon) not in self.location_dict.keys():
                 g = geocoder.osm([start_lat, start_lon], method='reverse')
-                self.location_dict[(start_lat, start_lon)] = {'country_code': g.country_code.upper(),
+                self.location_dict[(start_lat, start_lon)] = {'country_code': g.country_code,
                                                               'country': g.country,
+                                                              'region': g.region,
                                                               'state': g.state,
                                                               'city': g.city,
+                                                              'suburb': g.suburb,
+                                                              'neighborhood': g.neighborhood,
                                                               'postal': g.postal,
                                                               'address': g.address}
             self.activities_dict['country_code'].append(self.location_dict[(start_lat, start_lon)]['country_code'])
@@ -188,7 +190,7 @@ class StravaData:
             self.activities_dict['start_lat'].append(start_lat)
             self.activities_dict['start_lon'].append(start_lon)
             self.activities_dict['start_lat_lon'].append((start_lat, start_lon))
-            if activity.end_latlng is not None:
+            if this_activity.end_latlng is not None:
                 end_lat = this_activity.end_latlng.lat
                 end_lon = this_activity.end_latlng.lon
                 self.activities_dict['end_lat'].append(end_lat)
@@ -262,6 +264,14 @@ class StravaData:
             self.df.reset_index(drop=True, inplace=True)
         else:
             self.df = pd.DataFrame(self.activities_dict)
+        date_cols = ['start_datetime', 'start_datetime_utc', 'start_date', 'start_time']
+        for col in date_cols:
+            self.df[col] = self.df[col].astype('datetime64[ns]')
+        self.df['start_date'] = self.df['start_date'].dt.date
+        self.df['hour'] = self.df['start_time'].dt.hour
+        self.df['day_of_week'] = self.df['start_datetime_utc'].dt.day_name()
+        self.df['year'] = pd.DatetimeIndex(self.df['start_datetime']).year
+        self.df['country_code'] = self.df['country_code'].str.upper()
 
     def save_data_frame(self, include_datetime=False):
         """
