@@ -3,6 +3,7 @@ import sys
 import time
 import logging
 import configparser
+import geocoder
 import pandas as pd
 from datetime import datetime
 from stravalib import Client
@@ -29,7 +30,8 @@ class StravaData:
     def __init__(self):
         self.client = Client()
         self.activities_dict = defaultdict(list)
-        self.additional_dict = defaultdict(list)
+        # self.additional_dict = defaultdict(list)
+        self.location_dict = {}
         self.token_expires = None
         self.results_file = os.path.join('Results', 'Strava Data.csv')
         if os.path.exists(self.results_file):
@@ -41,7 +43,8 @@ class StravaData:
         self.cols = ['activity_id', 'activity_type', 'start_datetime', 'activity_name', 'activity_description',
                      'commute', 'distance_miles', 'distance_meters', 'moving_time_sec', 'elapsed_time_sec', 'splits',
                      'fastest_mile', 'fastest_mile_time', 'average_speed_ms', 'avg_speed_min_mile', 'max_speed_ms',
-                     'country', 'state', 'city', 'start_lat', 'start_long', 'end_lat', 'end_long', 'average_temp',
+                     'country_code', 'country', 'state', 'city', 'postal', 'address', 'start_lat', 'start_lon',
+                     'start_lat_lon', 'end_lat', 'end_lon', 'end_lat_lon', 'average_temp',
                      'elev_high_m', 'elev_low_m', 'total_elevation_gain_m', 'has_heartrate', 'average_heartrate',
                      'max_heartrate', 'calories', 'pr_count', 'best_efforts', 'average_watts', 'kilojoules',
                      'device_name', 'gear', 'gear_id', 'upload_id', 'external_id', 'start_datetime_utc', 'start_date',
@@ -102,31 +105,9 @@ class StravaData:
             self.activities_dict['moving_time_sec'].append(moving_time_sec)
             self.activities_dict['elapsed_time_sec'].append(activity.elapsed_time.seconds)
             # Speed
-            # splits_dict = self.get_splits(activity.splits_standard)
-            # self.activities_dict['splits'].append(splits_dict)
-            # if splits_dict is not None:
-            #     fastest_mile = min(splits_dict, key=splits_dict.get)
-            #     self.activities_dict['fastest_mile'].append(fastest_mile)
-            #     self.activities_dict['fastest_mile_time'].append(splits_dict[fastest_mile])
-            # else:
-            #     self.activities_dict['fastest_mile'].append(None)
-            #     self.activities_dict['fastest_mile_time'].append(None)
             self.activities_dict['average_speed_ms'].append(activity.average_speed.get_num())
             self.activities_dict['avg_speed_min_mile'].append((moving_time_sec / 60) / distance_miles)
             self.activities_dict['max_speed_ms'].append(activity.max_speed.get_num())
-            # Location
-            self.activities_dict['country'].append(activity.location_country)
-            self.activities_dict['state'].append(activity.location_state)
-            self.activities_dict['city'].append(activity.location_city)
-            self.activities_dict['start_lat'].append(activity.start_latitude)
-            self.activities_dict['start_long'].append(activity.start_longitude)
-            if activity.end_latlng is not None:
-                self.activities_dict['end_lat'].append(activity.end_latlng.lat)
-                self.activities_dict['end_long'].append(activity.end_latlng.lon)
-            else:
-                self.activities_dict['end_lat'].append(None)
-                self.activities_dict['end_long'].append(None)
-            self.activities_dict['average_temp'].append(activity.average_temp)
             # Elevation
             self.activities_dict['elev_high_m'].append(activity.elev_high)
             self.activities_dict['elev_low_m'].append(activity.elev_low)
@@ -135,7 +116,6 @@ class StravaData:
             self.activities_dict['has_heartrate'].append(activity.has_heartrate)
             self.activities_dict['average_heartrate'].append(activity.average_heartrate)
             self.activities_dict['max_heartrate'].append(activity.max_heartrate)
-            # self.activities_dict['calories'].append(activity.calories)
             # Records
             self.activities_dict['pr_count'].append(activity.pr_count)
             self.activities_dict['best_efforts'].append(activity.best_efforts)
@@ -143,9 +123,6 @@ class StravaData:
             self.activities_dict['average_watts'].append(activity.average_watts)
             self.activities_dict['kilojoules'].append(activity.kilojoules)
             # Additional
-            # self.activities_dict['device_name'].append(activity.device_name)
-            # self.activities_dict['gear'].append(activity.gear.name)
-            # self.activities_dict['gear_id'].append(activity.gear_id)
             self.activities_dict['upload_id'].append(activity.upload_id)
             self.activities_dict['external_id'].append(activity.external_id)
             self.activities_dict['start_datetime_utc'].append(activity.start_date.strftime('%Y-%m-%d %H:%M:%S'))
@@ -187,12 +164,45 @@ class StravaData:
                 self.activities_dict['gear_id'].append(None)
             self.activities_dict['calories'].append(this_activity.calories)
             self.activities_dict['device_name'].append(this_activity.device_name)
-            time.sleep(1)
+
+            # Location
+            # self.activities_dict['country'].append(activity.location_country)
+            # self.activities_dict['state'].append(activity.location_state)
+            # self.activities_dict['city'].append(activity.location_city)
+            start_lat = this_activity.start_latitude
+            start_lon = this_activity.start_longitude
+            if (start_lat, start_lon) not in self.location_dict.keys():
+                g = geocoder.osm([start_lat, start_lon], method='reverse')
+                self.location_dict[(start_lat, start_lon)] = {'country_code': g.country_code.upper(),
+                                                              'country': g.country,
+                                                              'state': g.state,
+                                                              'city': g.city,
+                                                              'postal': g.postal,
+                                                              'address': g.address}
+            self.activities_dict['country_code'].append(self.location_dict[(start_lat, start_lon)]['country_code'])
+            self.activities_dict['country'].append(self.location_dict[(start_lat, start_lon)]['country'])
+            self.activities_dict['state'].append(self.location_dict[(start_lat, start_lon)]['state'])
+            self.activities_dict['city'].append(self.location_dict[(start_lat, start_lon)]['city'])
+            self.activities_dict['postal'].append(self.location_dict[(start_lat, start_lon)]['postal'])
+            self.activities_dict['address'].append(self.location_dict[(start_lat, start_lon)]['address'])
+            self.activities_dict['start_lat'].append(start_lat)
+            self.activities_dict['start_lon'].append(start_lon)
+            self.activities_dict['start_lat_lon'].append((start_lat, start_lon))
+            if activity.end_latlng is not None:
+                end_lat = this_activity.end_latlng.lat
+                end_lon = this_activity.end_latlng.lon
+                self.activities_dict['end_lat'].append(end_lat)
+                self.activities_dict['end_lon'].append(end_lon)
+                self.activities_dict['end_lat_lon'].append((end_lat, end_lon))
+            else:
+                self.activities_dict['end_lat'].append(None)
+                self.activities_dict['end_lon'].append(None)
+                self.activities_dict['end_lat_lon'].append(None)
+            self.activities_dict['average_temp'].append(this_activity.average_temp)
+            time.sleep(2)
             self.check_expiry()
         logger.setLevel(logging.INFO)
         logger.info('Finished retrieving additional activity data.')
-        # Adding additional info to main activities dictionary
-        # self.activities_dict.update(self.additional_dict)
 
     @staticmethod
     def check_dict(dictionary):
@@ -267,6 +277,10 @@ class StravaData:
         self.df.to_csv(os.path.join(os.getcwd(), 'Results', file_name), index=False, encoding='utf-8-sig')
         logger.info(f'File saved as {file_name}')
 
+    def save_locations(self):
+        df_loc = pd.DataFrame(self.location_dict)
+        df_loc.to_csv(os.path.join(os.getcwd(), 'Results', 'locations.csv'), index=False, encoding='utf-8-sig')
+
 
 if __name__ == '__main__':
     try:
@@ -276,6 +290,7 @@ if __name__ == '__main__':
         sd.additional_info()
         sd.create_data_frame()
         sd.save_data_frame()
+        sd.save_locations()
         print('Complete')
     except Exception as e:
         logger.error(e, exc_info=sys.exc_info())
