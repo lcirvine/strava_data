@@ -185,6 +185,8 @@ class StravaData:
             self.activities_dict['country'].append(self.location_dict[(start_lat, start_lon)]['country'])
             self.activities_dict['state'].append(self.location_dict[(start_lat, start_lon)]['state'])
             self.activities_dict['city'].append(self.location_dict[(start_lat, start_lon)]['city'])
+            self.activities_dict['suburb'].append(self.location_dict[(start_lat, start_lon)]['suburb'])
+            self.activities_dict['neighborhood'].append(self.location_dict[(start_lat, start_lon)]['neighborhood'])
             self.activities_dict['postal'].append(self.location_dict[(start_lat, start_lon)]['postal'])
             self.activities_dict['address'].append(self.location_dict[(start_lat, start_lon)]['address'])
             self.activities_dict['start_lat'].append(start_lat)
