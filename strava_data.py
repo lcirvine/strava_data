@@ -30,7 +30,6 @@ class StravaData:
     def __init__(self):
         self.client = Client()
         self.activities_dict = defaultdict(list)
-        # self.additional_dict = defaultdict(list)
         self.location_dict = {(None, None): {'country_code': None, 'country': None, 'region': None, 'state': None,
                                              'city': None, 'suburb': None, 'neighborhood': None, 'postal': None,
                                              'address': None}}
