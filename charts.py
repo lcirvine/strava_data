@@ -32,6 +32,15 @@ df_run_distance_year = df_run.groupby('year')['distance_miles'].sum()
 df_ride_distance_year = df_ride.groupby('year')['distance_miles'].sum()
 
 
+def shoes():
+    df_shoe_miles = df_run.groupby('gear', as_index=False)['distance_miles'].sum()
+    df_shoe_runs = df_run.groupby('gear', as_index=False)['activity_id'].count()
+    df_shoes = pd.merge(df_shoe_miles, df_shoe_runs, on='gear')
+    df_shoes.rename(columns={'activity_id': 'runs'}, inplace=True)
+    df_shoes['miles_per_run'] = df_shoes['distance_miles'] / df_shoes['runs']
+    df_shoes.to_csv(os.path.join('Results', 'Shoes.csv'), index=False, encoding='utf-8-sig')
+
+
 def time_of_day(show=True):
     df_run_pivot = pd.pivot_table(df_run, 'distance_miles', 'hour', 'day_of_week', 'sum', fill_value=0)
     df_run_pivot = df_run_pivot.round(2)
@@ -103,3 +112,4 @@ if __name__ == '__main__':
     # this year only
     charts_by_year(True, date.today().year)
     time_of_day(show=False)
+    shoes()
