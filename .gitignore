@@ -1,0 +1,6 @@
+*.ini
+*.bat
+*.sh
+/Logs/
+/Results/
+/Charts/
