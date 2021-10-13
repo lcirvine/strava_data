@@ -4,20 +4,14 @@ import requests
 import json
 import pandas as pd
 import numpy as np
-import configparser
 import os
 import sys
 import time
 import geocoder
 from collections import defaultdict
-from datetime import datetime, timedelta
+from datetime import datetime, date
 from strava_logging import logger
-from db_connection import connect, sql_types, sql
-
-config = configparser.ConfigParser()
-config.read('strava_config.ini')
-strava_params = {param[0]: param[1] for param in config.items('strava')}
-strava_params['grant_type'] = 'refresh_token'
+from db_connection import connect, sql
 
 
 class Athlete:
@@ -168,23 +162,35 @@ class Activities:
 
     def get_activities(self, **kwargs):
         """
-        Returns a list of the athlete's activities that meet the parameters provided.
+        Returns data for multiple activities that meet the parameters provided.
+        The main use case is to retrieve all activities after the athlete's latest activity in the database
+        therefore the default 'after' value will be the latest start_date. If there are no activities for the athlete
+        the after value will be None.
         The results are concatenated onto the main dataframe with activities.
 
         :param kwargs:
-            after - return activities after this date provided as string in 'yyyy-mm-dd' format,
-            before - return activities before this date provided as string in 'yyyy-mm-dd' format,
+            after - return activities after this date provided as datetime, date, or str in 'yyyy-mm-dd' format,
+            before - return activities before this date provided as datetime, date, or str in 'yyyy-mm-dd' format,
             per_page - number of activities per page (default and max are 200 to minimize API calls),
             page - starting page number
         :return:
         """
-        # TODO: pass in arguments for after
-        after = kwargs.get('after', None)
-        if after is not None:
-            after = datetime.timestamp(datetime.strptime(after, '%Y-%m-%d'))
+        after = kwargs.get('after', self.latest_activity)
         before = kwargs.get('before', None)
+        if after is not None:
+            if isinstance(after, str):
+                after = datetime.timestamp(datetime.strptime(after, '%Y-%m-%d'))
+            elif isinstance(after, datetime):
+                after = datetime.timestamp(after)
+            elif isinstance(after, date):
+                after = datetime.timestamp(datetime.combine(after, datetime.min.time()))
         if before is not None:
-            before = datetime.timestamp(datetime.strptime(before, '%Y-%m-%d'))
+            if isinstance(before, str):
+                before = datetime.timestamp(datetime.strptime(before, '%Y-%m-%d'))
+            elif isinstance(before, datetime):
+                after = datetime.timestamp(before)
+            elif isinstance(before, date):
+                after = datetime.timestamp(datetime.combine(before, datetime.min.time()))
         per_page = kwargs.get('per_page', 200)
         page = kwargs.get('page', 1)
         response = requests.get(url=f"{self.base_url}/athlete/activities",
@@ -409,12 +415,15 @@ class Activities:
 
     def save_activities(self, backup_csv: str = None):
         """
-        Adds the activity data to the database and optionally saves a CSV with the activity data.
+        Adds new activities to the database. Optionally a CSV with the activity data can also be saved.
 
         :param backup_csv: (optional) the path where the CSV file will be saved
         :return:
         """
-        # TODO: Check if activities have already been added and drop duplicates
+        current = pd.read_sql('activities', self.conn, params={'athlete_id': self.athlete_id}, columns=['activity_id'])
+        self.df = pd.merge(self.df, current, how='left', on='activity_id', indicator=True)
+        self.df = self.df.loc[self.df['_merge'] == 'left_only']
+        self.df.drop(columns=['_merge'], inplace=True)
         self.df.to_sql('activities', self.conn, if_exists='append', index=False)
         if backup_csv:
             self.df.to_csv(backup_csv, index=False, encoding='utf-8-sig')
