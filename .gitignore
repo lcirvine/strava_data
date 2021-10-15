@@ -2,6 +2,7 @@
 *.bat
 *.sh
 *.txt
+!requirements.txt
 *.csv
 /.idea/
 /Logs/
