@@ -1,6 +1,10 @@
 *.ini
 *.bat
 *.sh
+*.txt
+*.csv
+/.idea/
 /Logs/
 /Results/
 /Charts/
+/Activities/
