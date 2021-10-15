@@ -265,11 +265,12 @@ class StravaData:
             self.df.reset_index(drop=True, inplace=True)
         else:
             self.df = pd.DataFrame(self.activities_dict)
-        date_cols = ['start_datetime', 'start_datetime_utc', 'start_date']
+
+        date_cols = ['start_datetime', 'start_datetime_utc', 'start_date', 'start_time']
         for col in date_cols:
             self.df[col] = self.df[col].astype('datetime64[ns]')
         self.df['start_date'] = self.df['start_date'].dt.date
-        self.df['hour'] = self.df['start_datetime'].dt.hour
+        self.df['hour'] = self.df['start_time'].dt.hour
         self.df['day_of_week'] = self.df['start_datetime_utc'].dt.day_name()
         self.df['year'] = pd.DatetimeIndex(self.df['start_datetime']).year
         self.df['country_code'] = self.df['country_code'].str.upper()
