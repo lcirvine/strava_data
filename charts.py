@@ -151,11 +151,15 @@ class RunningCharts:
         self.conn.close()
 
 
-def main():
+def main(update_all: bool = False):
     rc = RunningCharts()
     try:
-        # by year
-        for yr in rc.year_range:
+        if update_all:
+            for yr in rc.year_range:
+                rc.time_of_day(yr)
+                rc.distance_and_pace(yr)
+        else:
+            yr = date.today().year
             rc.time_of_day(yr)
             rc.distance_and_pace(yr)
         # all time
