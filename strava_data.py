@@ -265,6 +265,7 @@ class StravaData:
             self.df.reset_index(drop=True, inplace=True)
         else:
             self.df = pd.DataFrame(self.activities_dict)
+
         date_cols = ['start_datetime', 'start_datetime_utc', 'start_date', 'start_time']
         for col in date_cols:
             self.df[col] = self.df[col].astype('datetime64[ns]')
@@ -285,6 +286,7 @@ class StravaData:
             file_name = f"Strava Data {datetime.utcnow().strftime('%Y-%m-%d %H%M')}.csv"
         else:
             file_name = "Strava Data.csv"
+        self.df.drop_duplicates(subset='activity_id', inplace=True)
         self.df.to_csv(os.path.join(os.getcwd(), 'Results', file_name), index=False, encoding='utf-8-sig')
         logger.info(f'File saved as {file_name}')
 
