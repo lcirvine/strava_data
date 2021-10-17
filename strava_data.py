@@ -396,7 +396,7 @@ class Activities:
             # speed
             'average_speed_ms', 'min_per_mile', 'max_speed_ms',
             # time
-            'start_date', 'start_date_local', 'timezone', 'moving_time_sec', 'elapsed_time_sec', 'end_date',
+            'start_date', 'start_date_local', 'timezone', 'moving_time', 'elapsed_time', 'end_date',
             'end_date_local', 'hour_of_day', 'day_of_week', 'year_',
             # location
             'start_latitude', 'start_longitude', 'end_latitude', 'end_longitude',
@@ -411,6 +411,9 @@ class Activities:
             # ID References
             'gear_id', 'device_name', 'upload_id', 'external_id'
         ]
+        for col in cols:
+            if col not in self.df.columns:
+                self.df[col] = np.nan
         self.df = self.df[cols]
 
     def save_activities(self, backup_csv: str = None):
