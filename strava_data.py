@@ -160,7 +160,7 @@ class Activities:
         df_g = pd.read_sql('gear', self.conn)
         return df_g['gear_id'].to_list()
 
-    def get_activities(self, **kwargs):
+    def get_activities(self, save_json: bool = False, **kwargs):
         """
         Returns data for multiple activities that meet the parameters provided.
         The main use case is to retrieve all activities after the athlete's latest activity in the database
@@ -168,6 +168,7 @@ class Activities:
         the after value will be None.
         The results are concatenated onto the main dataframe with activities.
 
+        :param save_json: Option to save API response data as a json file, defaults to False
         :param kwargs:
             after - return activities after this date provided as datetime, date, or str in 'yyyy-mm-dd' format,
             before - return activities before this date provided as datetime, date, or str in 'yyyy-mm-dd' format,
@@ -198,10 +199,11 @@ class Activities:
                                 params={'after': after, 'before': before, 'per_page': per_page, 'page': page})
         assert response.ok, f"{response.status_code}, {response.text}"
         response_data = json.loads(response.text)
-        data_file = os.path.join('Activities', 'activity_lists',
-                                 f"activity_list {datetime.now().strftime('%Y-%m-%d %H%M%S')}.json")
-        with open(data_file, 'w') as f:
-            json.dump(response_data, f)
+        if save_json:
+            data_file = os.path.join('Activities', 'activity_lists',
+                                     f"activity_list {datetime.now().strftime('%Y-%m-%d %H%M%S')}.json")
+            with open(data_file, 'w') as f:
+                json.dump(response_data, f)
         if len(response_data) > 0:
             self.df = pd.concat([self.df, pd.json_normalize(response_data)]).reset_index(drop=True)
             time.sleep(2)
@@ -218,7 +220,7 @@ class Activities:
         elif 'activity_id' in self.df.columns:
             return self.df['activity_id'].to_list()
 
-    def get_activity_detail(self, activity_id: int, relevant_fields: list = None):
+    def get_activity_detail(self, activity_id: int, relevant_fields: list = None, save_json: bool = False):
         """
         There are certain items that are only available by calling the API for each activity ID, notably the split info,
         the activity description, the perceived exertion, the device name and number of calories. Activity info will
@@ -227,6 +229,7 @@ class Activities:
         :param activity_id: ID of the activity
         :param relevant_fields: List of fields that I am interested in which are not available from activity lists.
             Default items are  ['id', 'description', 'perceived_exertion', 'device_name', 'calories']
+        :param save_json: Option to save API response data as a json file, defaults to False
         :return:
         """
         if relevant_fields is None:
@@ -234,9 +237,10 @@ class Activities:
         activity_response = requests.get(url=f"{self.base_url}/activities/{activity_id}", headers=self.headers)
         assert activity_response.ok, f"{activity_response.status_code}, {activity_response.text}"
         activity_data = json.loads(activity_response.text)
-        data_file = os.path.join('Activities', 'individual_activities', f"{activity_id}.json")
-        with open(data_file, 'w') as f:
-            json.dump(activity_data, f)
+        if save_json:
+            data_file = os.path.join('Activities', 'individual_activities', f"{activity_id}.json")
+            with open(data_file, 'w') as f:
+                json.dump(activity_data, f)
         relevant_data = {x: activity_data[x] for x in activity_data.keys() if x in relevant_fields}
         df_activity_details = pd.DataFrame(relevant_data, index=[0])
         df_activity_details.rename(columns={'id': 'activity_id', 'description': 'activity_description'}, inplace=True)
