@@ -7,11 +7,10 @@ import numpy as np
 import os
 import sys
 import time
-import geocoder
-from collections import defaultdict
 from datetime import datetime, date
 from strava_logging import logger
 from db_connection import connect, sql
+from location_data import lookup_location
 
 
 class Athlete:
@@ -293,7 +292,7 @@ class Activities:
         df_gear = df_gear[cols]
         df_gear.to_sql('gear', self.conn, if_exists='append', index=False)
 
-    def update_locations(self):
+    def add_location(self):
         """
         Checks if there are any new locations in the activities returned. New locations are added to the database
         by calling the add_location method.
@@ -306,38 +305,9 @@ class Activities:
         locations = list(zip(df_l['start_latitude'], df_l['start_longitude']))
         new_locations = [ll for ll in locations if ll not in self.existing_locations]
         for ll in new_locations:
-            self.add_location(lat=ll[0], lon=ll[1])
-
-    def add_location(self, lat: float, lon: float):
-        """
-        Adds new locations to the database.
-
-        :param lat: Latitude of the new location.
-        :param lon: Longitude of the new location.
-        :return:
-        """
-        location = defaultdict(list)
-        g = geocoder.osm(location=(lat, lon), method='reverse')
-        assert g.ok, f"Error response: {g.response.text}"
-        location['latitude'].append(lat)
-        location['longitude'].append(lon)
-        location['place_id'].append(g.place_id)
-        location['osm_id'].append(g.osm_id)
-        location['country_code'].append(g.country_code.upper())
-        location['country'].append(g.country)
-        location['region'].append(g.region)
-        location['state_name'].append(g.state)
-        location['city'].append(g.city)
-        location['town'].append(g.town)
-        location['village'].append(g.village)
-        location['suburb'].append(g.suburb)
-        location['quarter'].append(g.quarter)
-        location['neighborhood'].append(g.neighborhood)
-        location['street'].append(g.street)
-        location['postal'].append(g.postal)
-        location['address'].append(g.address)
-        df_l = pd.DataFrame(location)
-        df_l.to_sql('locations', self.conn, if_exists='append', index=False)
+            loc_dict = lookup_location(lat=ll[0], lon=ll[1])
+            df_l = pd.DataFrame(loc_dict)
+            df_l.to_sql('locations', self.conn, if_exists='append', index=False)
 
     def get_athlete(self) -> pd.DataFrame:
         """
