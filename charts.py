@@ -128,14 +128,15 @@ class RunningCharts:
         ax1.set_ylim(bottom=df['avg_pace'].max() + 0.1, top=df['avg_pace'].min() - 0.1)
         if year is not None:
             ax1.set_xlim(left=f'{year}-01-01', right=f'{year}-12-31')
+            ax2 = ax1.twinx()
+            ax2.set_ylabel(f"Total {self.distance_name.lower()}")
+            ax2.plot(df['start_date'], df['total_dist'], color='blue')
+            ax2.set_ylim(bottom=0, top=top_right_axis)
+            ax2.text(0.85, 0.01, year_text, transform=ax2.transAxes)
         else:
             ax1.set_xlim(left=df['start_date_local'].min().date().strftime('%Y-%m-%d'),
                          right=df['start_date_local'].max().date().strftime('%Y-%m-%d'))
-        ax2 = ax1.twinx()
-        ax2.set_ylabel(f"Total {self.distance_name.lower()}")
-        ax2.plot(df['start_date'], df['total_dist'], color='blue')
-        ax2.set_ylim(bottom=0, top=top_right_axis)
-        ax2.text(0.85, 0.01, year_text, transform=ax2.transAxes)
+
         fig.tight_layout()
         if year is not None:
             chart_file = os.path.join(self.folder, f'{year} Running Chart.png')
