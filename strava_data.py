@@ -292,10 +292,10 @@ class Activities:
         df_gear = df_gear[cols]
         df_gear.to_sql('gear', self.conn, if_exists='append', index=False)
 
-    def add_location(self):
+    def add_new_locations(self):
         """
         Checks if there are any new locations in the activities returned. New locations are added to the database
-        by calling the add_location method.
+        by calling the add_new_locations method.
 
         :return:
         """
@@ -429,11 +429,12 @@ def main():
     try:
         activities.get_activities()
         for a_id in activities.get_activity_ids():
-            activities.get_activity_detail(a_id)
+            activities.get_activity_detail(a_id, save_json=True)
             time.sleep(2)
         activities.format_activities_df()
         activities.save_activities(backup_file)
         activities.save_splits()
+        activities.add_new_locations()
     except Exception as e:
         logger.error(e, exc_info=sys.exc_info())
     finally:

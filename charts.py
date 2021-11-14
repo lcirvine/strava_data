@@ -6,7 +6,8 @@ from strava_logging import logger
 from pandas.plotting import register_matplotlib_converters
 import matplotlib.pyplot as plt
 import seaborn as sns
-from datetime import date
+from datetime import datetime, date
+import imageio
 
 register_matplotlib_converters()
 
@@ -148,25 +149,84 @@ class RunningCharts:
         else:
             plt.close()
 
+    def distance_and_pace_gif(self, year: int = None):
+        temp_dir = os.path.join(os.getcwd(), 'Charts', self.distance_name, 'gif', 'temp_files')
+        df = self.df.copy()
+        if year is not None:
+            df = df.loc[df['year_'] == year]
+            chart_title = f'{year} Running Data'
+            start_date = f"{year}-01-01"
+            if year == date.today().year:
+                end_date = date.today().strftime('%Y-%m-%d')
+            else:
+                end_date = f"{year}-12-31"
+            s_days = pd.date_range(start=start_date, end=end_date, freq='D').to_series(name='Date')
+            df = pd.merge(s_days, df, how='outer', left_on='Date', right_on='activity_date')
+        else:
+            chart_title = f'All Running Data'
+            start_date = df['activity_date'].min().strftime('%Y-%m-%d')
+            end_date = df['activity_date'].max().strftime('%Y-%m-%d')
+            df['Date'] = df['activity_date']
+        df = df.sort_values('Date').reset_index(drop=True)
+        df['mins_per_run'] = round(df['moving_time'] / 60, 2)
+        df['avg_pace'] = df['mins_per_run'] / df[self.distance_unit]
+        df = df[['Date', 'avg_pace', 'activity_id', 'distance_miles', 'distance_km']]
+        y_lim_bottom = df['avg_pace'].max() + 0.1
+        y_lim_top = df['avg_pace'].min() - 0.1
+
+        filenames = []
+        for i in range(len(df)):
+            fig, ax = plt.subplots(figsize=(8, 6))
+            plt.scatter(df.loc[:i, 'Date'], df.loc[:i, 'avg_pace'], c='blue')
+            fig.autofmt_xdate()
+            ax.set_title(chart_title)
+            ax.set_xlabel('Date')
+            ax.set_ylabel('Pace')
+            ax.set_ylim(bottom=y_lim_bottom, top=y_lim_top)
+            ax.set_xbound(lower=datetime.strptime(start_date, '%Y-%m-%d').date(),
+                          upper=datetime.strptime(end_date, '%Y-%m-%d').date())
+            chart_text = f"Runs {df.loc[:i, 'activity_id'].count()}\n" \
+                         f"Distance {round(df.loc[:i, self.distance_unit].sum(), 2)}"
+            ax.text(0.75, 0.01, chart_text, transform=ax.transAxes, fontsize=14)
+            fig.tight_layout()
+            temp_file = os.path.join(temp_dir, f"gif_temp_{i}.png")
+            filenames.append(temp_file)
+            fig.savefig(temp_file)
+            plt.close()
+        gif_file = os.path.join(os.getcwd(), 'Charts', self.distance_name, 'gif', f"{chart_title}.gif")
+        with imageio.get_writer(gif_file, mode='I') as writer:
+            for file in filenames:
+                image = imageio.imread(file)
+                writer.append_data(image)
+                if file == filenames[-1]:
+                    for i in range(25):
+                        writer.append_data(image)
+
+        for file in filenames:
+            os.remove(file)
+
     def close(self):
         self.conn.close()
 
 
-def main(update_all: bool = False):
+def main(update_every_year: bool = False, update_all: bool = True):
     rc = RunningCharts()
     try:
-        if update_all:
+        if update_every_year:
             for yr in rc.year_range:
                 rc.time_of_day(yr)
                 rc.distance_and_pace(yr)
+                rc.distance_and_pace_gif(yr)
         else:
             yr = date.today().year
             rc.time_of_day(yr)
             rc.distance_and_pace(yr)
-        # all time
-        rc.time_of_day()
-        rc.distance_and_pace()
-        rc.dist_per_month()
+            rc.distance_and_pace_gif(yr)
+        if update_all:
+            rc.time_of_day()
+            rc.distance_and_pace()
+            rc.dist_per_month()
+            rc.distance_and_pace_gif()
     except Exception as e:
         logger.error(e, exc_info=sys.exc_info())
         print('Error - see logs')
