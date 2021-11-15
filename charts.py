@@ -125,7 +125,7 @@ class RunningCharts:
         else:
             ax1.set_title(f'All Running Data')
         c = df['avg_pace']
-        plt.scatter(df['start_date'], df['avg_pace'], c=c, cmap='cool_r')
+        plt.scatter(df['start_date'], df['avg_pace'], c=c, cmap='winter_r')
         ax1.set_ylim(bottom=df['avg_pace'].max() + 0.1, top=df['avg_pace'].min() - 0.1)
         if year is not None:
             ax1.set_xlim(left=f'{year}-01-01', right=f'{year}-12-31')
@@ -177,17 +177,17 @@ class RunningCharts:
         filenames = []
         for i in range(len(df)):
             fig, ax = plt.subplots(figsize=(8, 6))
-            plt.scatter(df.loc[:i, 'Date'], df.loc[:i, 'avg_pace'], c='blue')
+            plt.scatter(df.loc[:i, 'Date'], df.loc[:i, 'avg_pace'], c='dodgerblue')
             fig.autofmt_xdate()
             ax.set_title(chart_title)
             ax.set_xlabel('Date')
             ax.set_ylabel('Pace')
             ax.set_ylim(bottom=y_lim_bottom, top=y_lim_top)
-            ax.set_xbound(lower=datetime.strptime(start_date, '%Y-%m-%d').date(),
-                          upper=datetime.strptime(end_date, '%Y-%m-%d').date())
+            ax.set_xlim(left=datetime.strptime(start_date, '%Y-%m-%d').date(),
+                        right=datetime.strptime(end_date, '%Y-%m-%d').date())
             chart_text = f"Runs {df.loc[:i, 'activity_id'].count()}\n" \
-                         f"Distance {round(df.loc[:i, self.distance_unit].sum(), 2)}"
-            ax.text(0.75, 0.01, chart_text, transform=ax.transAxes, fontsize=14)
+                         f"Distance {round(df.loc[:i, self.distance_unit].sum())}"
+            ax.text(0.75, 0.01, chart_text, transform=ax.transAxes, fontsize=14, horizontalalignment='left')
             fig.tight_layout()
             temp_file = os.path.join(temp_dir, f"gif_temp_{i}.png")
             filenames.append(temp_file)
@@ -199,7 +199,7 @@ class RunningCharts:
                 image = imageio.imread(file)
                 writer.append_data(image)
                 if file == filenames[-1]:
-                    for i in range(25):
+                    for i in range(50):
                         writer.append_data(image)
 
         for file in filenames:
@@ -235,4 +235,4 @@ def main(update_every_year: bool = False, update_all: bool = True):
 
 
 if __name__ == '__main__':
-    main()
+    main(update_all=False)
