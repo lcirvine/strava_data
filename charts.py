@@ -50,7 +50,11 @@ class RunningCharts:
         df.rename(columns={'day_of_week': 'Day of Week', 'hour_of_day': 'Hour of Day'}, inplace=True)
         df_pivot = pd.pivot_table(df, self.distance_unit, 'Hour of Day', 'Day of Week', 'sum', fill_value=0)
         df_pivot = df_pivot.round(2)
-        df_pivot = df_pivot[['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']]
+        days_of_week = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+        for d in days_of_week:
+            if d not in df_pivot.columns:
+                df_pivot[d] = 0
+        df_pivot = df_pivot[days_of_week]
         plt.figure(figsize=(10, 10))
         heatmap = sns.heatmap(df_pivot.astype('int'), cmap='OrRd', annot=True, fmt='d', linewidth=0.5)
         heatmap.xaxis.tick_top()

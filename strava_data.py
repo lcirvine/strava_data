@@ -245,11 +245,13 @@ class Activities:
         df_activity_details.rename(columns={'id': 'activity_id', 'description': 'activity_description'}, inplace=True)
         self.df_details = pd.concat([self.df_details, df_activity_details]).reset_index(drop=True)
 
-        splits_km = pd.DataFrame(activity_data['splits_metric'])
+        # TODO: items no longer available from this API call
+        # average_heartrate, max_heartrate, elev_high, elev_low, splits_metric, splits_standard
+        splits_km = pd.DataFrame(activity_data.get('splits_metric'))
         splits_km['activity_id'] = activity_id
         self.df_km = pd.concat([self.df_km, splits_km]).reset_index(drop=True)
 
-        splits_miles = pd.DataFrame(activity_data['splits_standard'])
+        splits_miles = pd.DataFrame(activity_data.get('splits_standard'))
         splits_miles['activity_id'] = activity_id
         self.df_miles = pd.concat([self.df_miles, splits_miles]).reset_index(drop=True)
 
@@ -360,7 +362,7 @@ class Activities:
             'average_heartrate': 'heartrate'
         }, inplace=True)
         self.df = self.df.merge(self.df_details, how='left', on='activity_id')
-        self.df['activity_description'].replace('', np.nan, inplace=True)
+        self.df['activity_description'] = self.df['activity_description'].replace('', np.nan)
         cols = [
             # basics
             'activity_id', 'athlete_id', 'activity_type', 'workout_type', 'activity_date', 'activity_name',
@@ -435,6 +437,7 @@ def main():
         activities.save_activities(backup_file)
         activities.save_splits()
         activities.add_new_locations()
+        activities.update_gear()
     except Exception as e:
         logger.error(e, exc_info=sys.exc_info())
     finally:

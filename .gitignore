@@ -9,3 +9,5 @@
 /Results/
 /Charts/
 /Activities/
+/__pycache__/
+/.venv/
